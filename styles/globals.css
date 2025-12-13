@@ -1,17 +1,32 @@
-/* --- LOADING SCREEN STYLES --- */
+/* --- 1. RESET MUTLAK (SOLUSI LAYAR PUTIH KIRI KANAN) --- */
+html, body {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100vw;
+  min-height: 100vh;
+  background-color: #000000 !important; /* Paksa Hitam Pekat */
+  color: white;
+  overflow-x: hidden; /* Hilangkan scroll samping */
+  font-family: Arial, Helvetica, sans-serif;
+}
 
-/* Layar Putih Penuh */
-.loader-container {
+/* Pastikan semua elemen menuruti border-box */
+* {
+  box-sizing: border-box;
+}
+
+/* --- 2. LOGIKA LOADING SCREEN (SOLUSI TENGAH LAYAR) --- */
+.loader-wrapper {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: #ffffff; /* Bisa ganti warna background */
+  background-color: #000000; /* Background Loading Hitam */
   display: flex;
-  justify_content: center;
-  align-items: center;
-  z-index: 9999; /* Pastikan selalu di paling atas */
+  justify-content: center; /* Tengah Kiri-Kanan */
+  align-items: center; /* Tengah Atas-Bawah */
+  z-index: 99999; /* Paling Depan */
 }
 
 .loader-content {
@@ -21,52 +36,51 @@
   align-items: center;
 }
 
-/* Animasi Logo (Sedikit berdenyut) */
+/* Gambar Logo */
 .loader-logo {
-  width: 150px; /* Atur ukuran logo */
+  width: 150px; /* Ukuran Logo */
   height: auto;
-  margin-bottom: 30px;
-  animation: pulse 1.5s infinite;
+  margin-bottom: 25px;
+  animation: fadePulse 2s infinite;
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-/* Wadah Bar Loading (Abu-abu) */
-.progress-bar-container {
+/* Kotak Bar Loading */
+.progress-bar-box {
   width: 250px;
-  height: 8px;
-  background-color: #e0e0e0;
-  border-radius: 10px;
+  height: 6px;
+  background-color: #333;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+  position: relative;
 }
 
-/* Isi Bar (Warna Biru + Animasi Jalan) */
+/* Isi Bar (Warna Merah Unhas) */
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%); /* Gradasi warna tech */
-  border-radius: 10px;
+  background: linear-gradient(90deg, #d32f2f 0%, #ff5252 100%);
   width: 0%;
-  animation: loadProgress 2s ease-in-out forwards;
+  animation: loadFill 2.5s ease-in-out forwards;
 }
 
-/* Teks Loading */
 .loading-text {
   margin-top: 15px;
-  font-family: monospace; /* Font ala coding */
-  color: #666;
-  font-size: 14px;
+  color: #888;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   animation: blink 1s infinite;
 }
 
-/* Kunci Animasi Bar agar pas 2 detik */
-@keyframes loadProgress {
+/* --- 3. ANIMASI --- */
+@keyframes loadFill {
   0% { width: 0%; }
   100% { width: 100%; }
+}
+
+@keyframes fadePulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 @keyframes blink {
