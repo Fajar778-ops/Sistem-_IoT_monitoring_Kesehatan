@@ -150,7 +150,7 @@ export default function Home() {
     return (
         <div style={{ padding: '20px', fontFamily: 'Arial', maxWidth: '800px', margin: '0 auto', backgroundColor: '#000', color: 'white', minHeight: '100vh' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '15px', marginBottom: '15px' }}>
-                <h2 style={{ margin: 0, color: '#00FF00' }}>ICU MONITORING</h2>
+                <h2 style={{ margin: 0, color: '#00FF00' }}>Sistem Monitoring Kesehatan</h2>
                 <Link href="/riwayat">
                     <button style={{ padding: '10px 15px', backgroundColor: '#0070f3', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
                         📂 LIHAT DATA
