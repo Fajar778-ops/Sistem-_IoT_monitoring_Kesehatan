@@ -56,11 +56,43 @@ export default function Home() {
         responsive: true, animation: false, 
         scales: {
             x: { display: false }, 
-            y: { display: true, min: CHART_MIN, max: CHART_MAX, grid: { color: '#222' }, ticks: { color: '#888' }}
+            y: { display: false, min: CHART_MIN, max: CHART_MAX } // EKG pakai batas tetap
         },
         plugins: { legend: { display: false } },
         maintainAspectRatio: false,
     };
+
+    // 2. STATE & OPTIONS UNTUK PPG (CYAN) -- BAGIAN BARU
+    const [ppgData, setPpgData] = useState({
+        labels: new Array(TOTAL_POINTS).fill(''),
+        datasets: [{
+            label: 'PPG (SPO2 Wave)',
+            data: new Array(TOTAL_POINTS).fill(null),
+            borderColor: '#00FFFF', // Warna CYAN (Biru Muda)
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.4, // Kurva halus
+            fill: false
+        }]
+    });
+
+    // --- INI YANG TADI KURANG ---
+    const ppgChartOptions = {
+        responsive: true, animation: false,
+        scales: {
+            x: { display: false },
+            y: { 
+                display: false, // Sembunyikan angka sumbu Y
+                // PENTING: JANGAN pakai min/max disini. 
+                // Biarkan dia Auto-Scale mengikuti sinyal jari.
+            }
+        },
+        plugins: { legend: { display: false } },
+        maintainAspectRatio: false,
+    };
+
+    // Buffer/Ref untuk menampung data PPG sementara
+    const ppgValues = useRef(new Array(TOTAL_POINTS).fill(null));
 
     useEffect(() => {
         setIsClient(true);
@@ -69,7 +101,7 @@ export default function Home() {
         }).catch(e => console.log(e));
     }, []);
 
-    useEffect(() => {
+useEffect(() => {
         const clientId = "Web-" + Math.random().toString(16).substr(2, 8);
         const client = mqtt.connect(MQTT_SERVER, {
             clientId, protocolVersion: 4, clean: true, 
@@ -79,20 +111,24 @@ export default function Home() {
         client.on('connect', () => {
             console.log("MQTT Connected");
             setIsMqttConnected(true);
-            setMqttClient(client); // Simpan client ke state
-            client.subscribe([TOPIC_VITALS, TOPIC_EKG]);
+            setMqttClient(client); 
+            
+            // --- PERUBAHAN 1: JANGAN LUPA SUBSCRIBE TOPIK BARU ---
+            // Tambahkan 'esp32/ppg' ke dalam list array ini
+            client.subscribe([TOPIC_VITALS, TOPIC_EKG, 'esp32/ppg']);
         });
 
         client.on('message', (topic, message) => {
             try {
                 const payload = JSON.parse(message.toString());
 
+                // --- 1. LOGIKA VITALS (ANGKA) ---
                 if (topic === TOPIC_VITALS) {
                     setDataSensor({
                         bpm: payload.bpm, spo2: payload.spo2, suhu: payload.suhu, pasien: payload.pasien
                     });
 
-                    // Simpan Database (Hapus filter >0 jika ingin tes paksa)
+                    // Simpan Database
                     if (payload.bpm > 0 || payload.spo2 > 0) {
                         fetch('/api/save-vitals', {
                             method: 'POST',
@@ -101,15 +137,16 @@ export default function Home() {
                         }).catch(err => console.error("Gagal simpan DB:", err));
                     }
                 } 
+                // --- 2. LOGIKA EKG (GRAFIK HIJAU) ---
                 else if (topic === TOPIC_EKG) {
                     const val = payload.val;
                     const idx = payload.x; 
 
                     if (idx >= 0 && idx < TOTAL_POINTS) {
                         chartValues.current[idx] = val;
+                        // Eraser Bar EKG
                         for(let i=1; i<=5; i++) {
-                            let eraserIdx = (idx + i) % TOTAL_POINTS;
-                            chartValues.current[eraserIdx] = null;
+                            chartValues.current[(idx + i) % TOTAL_POINTS] = null;
                         }
                         setChartData(prev => ({
                             ...prev,
@@ -117,11 +154,40 @@ export default function Home() {
                         }));
                     }
                 }
+                // --- 3. LOGIKA PPG (GRAFIK BIRU/CYAN) - LANGKAH 3 DISINI ---
+                else if (topic === 'esp32/ppg') {
+                    const val = payload.val;
+                    const idx = payload.x; // Kunci Sinkronisasi (Pakai X dari ESP32)
+
+                    if (idx >= 0 && idx < TOTAL_POINTS) {
+                        // Masukkan data ke buffer PPG
+                        ppgValues.current[idx] = val;
+
+                        // Eraser Bar PPG (Hapus 5 titik depan biar rapi)
+                        for(let i=1; i<=5; i++) {
+                            ppgValues.current[(idx + i) % TOTAL_POINTS] = null;
+                        }
+
+                        // Update State PPG
+                        setPpgData(prev => ({
+                            ...prev,
+                            datasets: [{
+                                ...prev.datasets[0],
+                                data: [...ppgValues.current]
+                            }]
+                        }));
+                    }
+                }
+
             } catch (error) {}
         });
+        
+        // Cleanup function (opsional tapi bagus ada)
+        return () => {
+            if(client) client.end();
+        };
 
-        return () => { if (client) client.end(); };
-    }, []);
+    }, []); // Dependency array kosong agar jalan sekali saat load
 
     // --- FUNGSI KIRIM NAMA KE ESP32 ---
     const handleSubmit = async (e) => {
@@ -148,39 +214,88 @@ export default function Home() {
     };
 
     return (
-        <div style={{ padding: '20px', fontFamily: 'Arial', maxWidth: '800px', margin: '0 auto', backgroundColor: '#000', color: 'white', minHeight: '100vh' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '15px', marginBottom: '15px' }}>
-                <h2 style={{ margin: 0, color: '#00FF00' }}>Sistem Monitoring Kesehatan</h2>
-                <Link href="/riwayat">
-                    <button style={{ padding: '10px 15px', backgroundColor: '#0070f3', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
-                        📂 LIHAT DATA
-                    </button>
-                </Link>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div><span style={{color: '#888'}}>Pasien:</span> <strong style={{fontSize: '1.2em', color: 'cyan'}}>{dataSensor.pasien}</strong></div>
-                <div style={{ fontSize: '0.8em', color: isMqttConnected ? '#00FF00' : 'red'}}>● {isMqttConnected ? 'LIVE' : 'DISCONNECTED'}</div>
-            </div>
+    <div style={{ padding: '20px', fontFamily: 'Arial', maxWidth: '1000px', margin: '0 auto', backgroundColor: '#000', color: 'white', minHeight: '100vh' }}>
+        
+        {/* --- HEADER --- */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '15px', marginBottom: '15px' }}>
+            <h2 style={{ margin: 0, color: '#00FF00' }}>Sistem Monitoring Kesehatan</h2>
+            <Link href="/riwayat">
+                <button style={{ padding: '10px 15px', backgroundColor: '#0070f3', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
+                    📂 LIHAT DATA
+                </button>
+            </Link>
+        </div>
+        
+        {/* --- INFO PASIEN --- */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div><span style={{color: '#888'}}>Pasien:</span> <strong style={{fontSize: '1.2em', color: 'cyan'}}>{dataSensor.pasien}</strong></div>
+            <div style={{ fontSize: '0.8em', color: isMqttConnected ? '#00FF00' : 'red'}}>● {isMqttConnected ? 'LIVE' : 'DISCONNECTED'}</div>
+        </div>
 
-            <div style={{ border: '3px solid #333', borderRadius: '15px', padding: '10px', backgroundColor: '#111', position: 'relative' }}>
-                <div style={{ height: '300px', width: '100%', marginBottom: '10px' }}>
+        {/* --- BAGIAN GRAFIK (SIDE BY SIDE / KIRI KANAN) --- */}
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'row', // Kunci biar sejajar kiri-kanan
+            gap: '20px',          // Jarak antar kotak
+            height: '320px',      // Tinggi area grafik
+            marginBottom: '20px'
+        }}>
+            {/* KIRI: EKG */}
+            <div style={{ flex: 1, backgroundColor: '#111', border: '2px solid #333', borderRadius: '15px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ margin: '0 0 5px 0', color: '#00FF00', fontSize: '14px', textAlign:'center' }}>ECG (Jantung)</h3>
+                <div style={{ flex: 1, position: 'relative' }}>
                     {isClient && <Line data={chartData} options={chartOptions} />}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px', borderTop: '2px solid #333', paddingTop: '10px' }}>
-                    <div style={{ textAlign: 'center' }}><div style={{ color: '#00FF00', fontSize: '0.9em' }}>HR (BPM)</div><div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#00FF00', lineHeight: '1' }}>{dataSensor.bpm}</div></div>
-                    <div style={{ textAlign: 'center' }}><div style={{ color: '#00FFFF', fontSize: '0.9em' }}>SpO2 (%)</div><div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#00FFFF', lineHeight: '1' }}>{dataSensor.spo2}</div></div>
-                    <div style={{ textAlign: 'center' }}><div style={{ color: 'orange', fontSize: '0.9em' }}>TEMP (°C)</div><div style={{ fontSize: '2.5em', fontWeight: 'bold', color: 'orange', lineHeight: '1' }}>{dataSensor.suhu}</div></div>
+            </div>
+
+            {/* KANAN: PPG (BARU) */}
+            <div style={{ flex: 1, backgroundColor: '#111', border: '2px solid #333', borderRadius: '15px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ margin: '0 0 5px 0', color: '#00FFFF', fontSize: '14px', textAlign:'center' }}>PPG (SPO2)</h3>
+                <div style={{ flex: 1, position: 'relative' }}>
+                    {isClient && <Line data={ppgData} options={ppgChartOptions} />}
+                </div>
+            </div>
+        </div>
+
+        {/* --- BAGIAN ANGKA / INDIKATOR (DI BAWAH GRAFIK) --- */}
+        <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr 1fr', // Bagi 3 kolom
+            gap: '15px', 
+            marginBottom: '30px' 
+        }}>
+            {/* KOTAK BPM */}
+            <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '10px', padding: '15px', textAlign: 'center' }}>
+                <div style={{ color: '#00FF00', fontSize: '0.9em', marginBottom: '5px' }}>HEART RATE</div>
+                <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#00FF00', lineHeight: '1' }}>
+                    {dataSensor.bpm} <span style={{fontSize:'0.4em'}}>BPM</span>
                 </div>
             </div>
 
-            <div style={{ marginTop: '30px', padding: '15px', border: '1px solid #222', borderRadius: '10px', backgroundColor: '#050505' }}>
-                <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
-                    <input value={nama} onChange={e => setNama(e.target.value)} placeholder="Ganti Pasien..." style={{ padding: '8px', borderRadius: '5px', border: '1px solid #444', backgroundColor: '#222', color: 'white' }} />
-                    <button type="submit" style={{ backgroundColor: '#005500', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>SET</button>
-                </form>
-                <small style={{color: '#666', marginTop: '5px', display:'block'}}>{status}</small>
+            {/* KOTAK SPO2 */}
+            <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '10px', padding: '15px', textAlign: 'center' }}>
+                <div style={{ color: '#00FFFF', fontSize: '0.9em', marginBottom: '5px' }}>OXYGEN (SpO2)</div>
+                <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#00FFFF', lineHeight: '1' }}>
+                    {dataSensor.spo2} <span style={{fontSize:'0.4em'}}>%</span>
+                </div>
+            </div>
+
+            {/* KOTAK SUHU */}
+            <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '10px', padding: '15px', textAlign: 'center' }}>
+                <div style={{ color: 'orange', fontSize: '0.9em', marginBottom: '5px' }}>TEMPERATURE</div>
+                <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: 'orange', lineHeight: '1' }}>
+                    {dataSensor.suhu} <span style={{fontSize:'0.4em'}}>°C</span>
+                </div>
             </div>
         </div>
-    );
-}
+
+        {/* --- FORM GANTI PASIEN --- */}
+        <div style={{ padding: '15px', border: '1px solid #222', borderRadius: '10px', backgroundColor: '#050505' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
+                <input value={nama} onChange={e => setNama(e.target.value)} placeholder="Ganti Pasien..." style={{ padding: '8px', borderRadius: '5px', border: '1px solid #444', backgroundColor: '#222', color: 'white', flex: 1 }} />
+                <button type="submit" style={{ backgroundColor: '#005500', color: 'white', border: 'none', padding: '8px 25px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>SET</button>
+            </form>
+            <small style={{color: '#666', marginTop: '5px', display:'block'}}>{status}</small>
+        </div>
+    </div>
+);
