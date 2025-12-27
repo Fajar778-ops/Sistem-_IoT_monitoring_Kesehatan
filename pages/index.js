@@ -68,7 +68,7 @@ export default function Home() {
     const [ppgData, setPpgData] = useState({
         labels: new Array(TOTAL_POINTS).fill(''),
         datasets: [{
-            label: 'PPG (SPO2 Wave)',
+            label: 'SPO2',
             data: new Array(TOTAL_POINTS).fill(null),
             borderColor: '#00FFFF', // Warna Garis Cyan
             borderWidth: 2,
@@ -77,7 +77,7 @@ export default function Home() {
             
             // --- EFEK FILL (ISI WARNA) ---
             fill: true, 
-            backgroundColor: 'rgba(0, 255, 255, 0.2)', // Warna transparan di bawah garis
+            backgroundColor: 'rgba(0, 255, 255, 0.5)', // Warna transparan di bawah garis
         }]
     });
 
@@ -86,11 +86,18 @@ export default function Home() {
         scales: {
             x: { display: false },
             y: { 
-                // --- SUMBU Y (ANGKA) MUNCUL DISINI ---
                 display: true, 
-                position: 'right', // Angka ditaruh di kanan biar rapi
+                position: 'right',
+                
+                min: 0,
+                max: 100, 
+                
                 grid: { color: '#333' },
-                ticks: { color: 'cyan', font: { size: 10 } }
+                ticks: { 
+                    color: 'cyan', 
+                    font: { size: 10 },
+                    stepSize: 20 // Jarak antar angka (0, 20, 40... 100)
+                }
             }
         },
         plugins: { legend: { display: false } },
