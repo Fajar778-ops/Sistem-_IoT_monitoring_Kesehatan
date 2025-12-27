@@ -298,5 +298,5 @@ useEffect(() => {
             <small style={{color: '#666', marginTop: '5px', display:'block'}}>{status}</small>
         </div>
     </div>
-);
+    );
 }
