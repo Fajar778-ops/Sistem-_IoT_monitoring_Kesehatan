@@ -38,7 +38,7 @@ export default function Home() {
     const [dataSensor, setDataSensor] = useState({ bpm: "--", spo2: "--", suhu: "--", pasien: "Menunggu..." });
     const chartValues = useRef(new Array(TOTAL_POINTS).fill(null));
 
-    const [chartData, setChartData] = useState({
+   const [chartData, setChartData] = useState({
         labels: new Array(TOTAL_POINTS).fill(''), 
         datasets: [{
             label: 'EKG',
@@ -56,41 +56,46 @@ export default function Home() {
         responsive: true, animation: false, 
         scales: {
             x: { display: false }, 
-            y: { display: false, min: CHART_MIN, max: CHART_MAX } // EKG pakai batas tetap
+            y: { display: false, min: CHART_MIN, max: CHART_MAX } 
         },
         plugins: { legend: { display: false } },
         maintainAspectRatio: false,
     };
 
-    // 2. STATE & OPTIONS UNTUK PPG (CYAN) -- BAGIAN BARU
+    // =================================================================
+    // 2. SETUP GRAFIK PPG (CYAN - KECIL DI KANAN)
+    // =================================================================
     const [ppgData, setPpgData] = useState({
         labels: new Array(TOTAL_POINTS).fill(''),
         datasets: [{
             label: 'PPG (SPO2 Wave)',
             data: new Array(TOTAL_POINTS).fill(null),
-            borderColor: '#00FFFF', // Warna CYAN (Biru Muda)
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.4, // Kurva halus
-            fill: false
-        }]
-    });
-
-    // --- INI YANG TADI KURANG ---
-    const [ppgData, setPpgData] = useState({
-        labels: new Array(TOTAL_POINTS).fill(''),
-        datasets: [{
-            label: 'PPG (SPO2 Wave)',
-            data: new Array(TOTAL_POINTS).fill(null),
-            borderColor: '#00FFFF', // Warna garis CYAN
+            borderColor: '#00FFFF', // Warna Garis Cyan
             borderWidth: 2,
             pointRadius: 0,
             tension: 0.4,
-            // --- PERUBAHAN DISINI UNTUK EFEK FILL ---
-            fill: true, // Aktifkan mode fill
-            backgroundColor: 'rgba(0, 255, 255, 0.2)', // Warna Cyan transparan di bawah garis
+            
+            // --- EFEK FILL (ISI WARNA) ---
+            fill: true, 
+            backgroundColor: 'rgba(0, 255, 255, 0.2)', // Warna transparan di bawah garis
         }]
     });
+
+    const ppgChartOptions = {
+        responsive: true, animation: false,
+        scales: {
+            x: { display: false },
+            y: { 
+                // --- SUMBU Y (ANGKA) MUNCUL DISINI ---
+                display: true, 
+                position: 'right', // Angka ditaruh di kanan biar rapi
+                grid: { color: '#333' },
+                ticks: { color: 'cyan', font: { size: 10 } }
+            }
+        },
+        plugins: { legend: { display: false } },
+        maintainAspectRatio: false,
+    };
 
     // Buffer/Ref untuk menampung data PPG sementara
     const ppgValues = useRef(new Array(TOTAL_POINTS).fill(null));
