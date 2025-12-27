@@ -77,19 +77,20 @@ export default function Home() {
     });
 
     // --- INI YANG TADI KURANG ---
-    const ppgChartOptions = {
-        responsive: true, animation: false,
-        scales: {
-            x: { display: false },
-            y: { 
-                display: false, // Sembunyikan angka sumbu Y
-                // PENTING: JANGAN pakai min/max disini. 
-                // Biarkan dia Auto-Scale mengikuti sinyal jari.
-            }
-        },
-        plugins: { legend: { display: false } },
-        maintainAspectRatio: false,
-    };
+    const [ppgData, setPpgData] = useState({
+        labels: new Array(TOTAL_POINTS).fill(''),
+        datasets: [{
+            label: 'PPG (SPO2 Wave)',
+            data: new Array(TOTAL_POINTS).fill(null),
+            borderColor: '#00FFFF', // Warna garis CYAN
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.4,
+            // --- PERUBAHAN DISINI UNTUK EFEK FILL ---
+            fill: true, // Aktifkan mode fill
+            backgroundColor: 'rgba(0, 255, 255, 0.2)', // Warna Cyan transparan di bawah garis
+        }]
+    });
 
     // Buffer/Ref untuk menampung data PPG sementara
     const ppgValues = useRef(new Array(TOTAL_POINTS).fill(null));
@@ -213,9 +214,9 @@ useEffect(() => {
         });
     };
 
-    return (
+return (
     <div style={{ padding: '20px', fontFamily: 'Arial', maxWidth: '1000px', margin: '0 auto', backgroundColor: '#000', color: 'white', minHeight: '100vh' }}>
-        
+
         {/* --- HEADER --- */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '15px', marginBottom: '15px' }}>
             <h2 style={{ margin: 0, color: '#00FF00' }}>Sistem Monitoring Kesehatan</h2>
@@ -225,78 +226,75 @@ useEffect(() => {
                 </button>
             </Link>
         </div>
-        
+
         {/* --- INFO PASIEN --- */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <div><span style={{color: '#888'}}>Pasien:</span> <strong style={{fontSize: '1.2em', color: 'cyan'}}>{dataSensor.pasien}</strong></div>
             <div style={{ fontSize: '0.8em', color: isMqttConnected ? '#00FF00' : 'red'}}>● {isMqttConnected ? 'LIVE' : 'DISCONNECTED'}</div>
         </div>
 
-        {/* --- BAGIAN GRAFIK (SIDE BY SIDE / KIRI KANAN) --- */}
-        <div style={{ 
-            display: 'flex', 
-            flexDirection: 'row', // Kunci biar sejajar kiri-kanan
-            gap: '20px',          // Jarak antar kotak
-            height: '320px',      // Tinggi area grafik
-            marginBottom: '20px'
-        }}>
-            {/* KIRI: EKG */}
-            <div style={{ flex: 1, backgroundColor: '#111', border: '2px solid #333', borderRadius: '15px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ margin: '0 0 5px 0', color: '#00FF00', fontSize: '14px', textAlign:'center' }}>ECG (Jantung)</h3>
-                <div style={{ flex: 1, position: 'relative' }}>
-                    {isClient && <Line data={chartData} options={chartOptions} />}
+        {/* ================================================================== */}
+        {/* === BAGIAN 1: GRAFIK EKG BESAR (ATAS - FULL WIDTH) === */}
+        {/* ================================================================== */}
+        <div style={{ border: '2px solid #333', borderRadius: '15px', padding: '15px', backgroundColor: '#111', marginBottom: '20px', boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ margin: '0 0 10px 0', color: '#00FF00', textAlign: 'center' }}>ECG / EKG (Aktivitas Jantung)</h3>
+            {/* Area Grafik Besar */}
+            <div style={{ height: '350px', width: '100%' }}>
+                {isClient && <Line data={chartData} options={chartOptions} />}
+            </div>
+        </div>
+
+        {/* ================================================================== */}
+        {/* === BAGIAN 2: KONTAINER BAWAH (INDIKATOR KIRI, PPG KANAN) === */}
+        {/* ================================================================== */}
+        <div style={{ display: 'flex', flexDirection: 'row', gap: '20px', height: '220px' }}>
+
+            {/* --- BAGIAN 2a: INDIKATOR NUMERIK (KIRI - LEBIH LEBAR) --- */}
+            <div style={{ flex: 3, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+                {/* KOTAK BPM */}
+                <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '12px', padding: '15px', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center' }}>
+                    <div style={{ color: '#00FF00', fontSize: '0.9em', marginBottom: '5px' }}>HEART RATE (PR)</div>
+                    <div style={{ fontSize: '2.8em', fontWeight: 'bold', color: '#00FF00', lineHeight: '1' }}>
+                        {dataSensor.bpm} <span style={{fontSize:'0.4em'}}>BPM</span>
+                    </div>
+                </div>
+                {/* KOTAK SPO2 */}
+                <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '12px', padding: '15px', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center' }}>
+                    <div style={{ color: '#00FFFF', fontSize: '0.9em', marginBottom: '5px' }}>OXYGEN (SpO2)</div>
+                    <div style={{ fontSize: '2.8em', fontWeight: 'bold', color: '#00FFFF', lineHeight: '1' }}>
+                        {dataSensor.spo2} <span style={{fontSize:'0.4em'}}>%</span>
+                    </div>
+                </div>
+                {/* KOTAK SUHU */}
+                <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '12px', padding: '15px', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center' }}>
+                    <div style={{ color: 'orange', fontSize: '0.9em', marginBottom: '5px' }}>TEMPERATURE</div>
+                    <div style={{ fontSize: '2.8em', fontWeight: 'bold', color: 'orange', lineHeight: '1' }}>
+                        {dataSensor.suhu} <span style={{fontSize:'0.4em'}}>°C</span>
+                    </div>
                 </div>
             </div>
 
-            {/* KANAN: PPG (BARU) */}
-            <div style={{ flex: 1, backgroundColor: '#111', border: '2px solid #333', borderRadius: '15px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ margin: '0 0 5px 0', color: '#00FFFF', fontSize: '14px', textAlign:'center' }}>PPG (SPO2)</h3>
+            {/* --- BAGIAN 2b: GRAFIK PPG KECIL (KANAN - SUDUT) --- */}
+            <div style={{ flex: 2, backgroundColor: '#111', border: '2px solid #333', borderRadius: '15px', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ margin: '0 0 5px 0', color: '#00FFFF', fontSize: '14px', textAlign: 'center' }}>PPG (Sirkulasi Darah)</h3>
+                {/* Area Grafik Kecil */}
                 <div style={{ flex: 1, position: 'relative' }}>
                     {isClient && <Line data={ppgData} options={ppgChartOptions} />}
                 </div>
             </div>
+
         </div>
+        {/* Akhir Bagian Bawah */}
 
-        {/* --- BAGIAN ANGKA / INDIKATOR (DI BAWAH GRAFIK) --- */}
-        <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr 1fr 1fr', // Bagi 3 kolom
-            gap: '15px', 
-            marginBottom: '30px' 
-        }}>
-            {/* KOTAK BPM */}
-            <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '10px', padding: '15px', textAlign: 'center' }}>
-                <div style={{ color: '#00FF00', fontSize: '0.9em', marginBottom: '5px' }}>HEART RATE</div>
-                <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#00FF00', lineHeight: '1' }}>
-                    {dataSensor.bpm} <span style={{fontSize:'0.4em'}}>BPM</span>
-                </div>
-            </div>
 
-            {/* KOTAK SPO2 */}
-            <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '10px', padding: '15px', textAlign: 'center' }}>
-                <div style={{ color: '#00FFFF', fontSize: '0.9em', marginBottom: '5px' }}>OXYGEN (SpO2)</div>
-                <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: '#00FFFF', lineHeight: '1' }}>
-                    {dataSensor.spo2} <span style={{fontSize:'0.4em'}}>%</span>
-                </div>
-            </div>
-
-            {/* KOTAK SUHU */}
-            <div style={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '10px', padding: '15px', textAlign: 'center' }}>
-                <div style={{ color: 'orange', fontSize: '0.9em', marginBottom: '5px' }}>TEMPERATURE</div>
-                <div style={{ fontSize: '2.5em', fontWeight: 'bold', color: 'orange', lineHeight: '1' }}>
-                    {dataSensor.suhu} <span style={{fontSize:'0.4em'}}>°C</span>
-                </div>
-            </div>
-        </div>
-
-        {/* --- FORM GANTI PASIEN --- */}
-        <div style={{ padding: '15px', border: '1px solid #222', borderRadius: '10px', backgroundColor: '#050505' }}>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
-                <input value={nama} onChange={e => setNama(e.target.value)} placeholder="Ganti Pasien..." style={{ padding: '8px', borderRadius: '5px', border: '1px solid #444', backgroundColor: '#222', color: 'white', flex: 1 }} />
-                <button type="submit" style={{ backgroundColor: '#005500', color: 'white', border: 'none', padding: '8px 25px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>SET</button>
+        {/* --- FORM GANTI PASIEN (Tetap di bawah) --- */}
+        <div style={{ marginTop: '25px', padding: '20px', border: '1px solid #222', borderRadius: '15px', backgroundColor: '#050505' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '15px' }}>
+                <input value={nama} onChange={e => setNama(e.target.value)} placeholder="Masukkan Nama Pasien Baru..." style={{ padding: '12px', borderRadius: '8px', border: '1px solid #444', backgroundColor: '#222', color: 'white', flex: 1, fontSize: '1em' }} />
+                <button type="submit" style={{ backgroundColor: '#005500', color: 'white', border: 'none', padding: '12px 30px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1em' }}>SET PASIEN</button>
             </form>
-            <small style={{color: '#666', marginTop: '5px', display:'block'}}>{status}</small>
+            <small style={{color: '#666', marginTop: '10px', display:'block', textAlign: 'center'}}>{status}</small>
         </div>
     </div>
-    );
-    }
+);
+}
