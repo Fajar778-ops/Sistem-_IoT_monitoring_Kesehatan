@@ -22,8 +22,8 @@ const TOPIC_VITALS = "esp32/vitals";
 const TOPIC_EKG    = "esp32/ekg";
 const TOPIC_CONTROL = "esp32/control"; // Topik baru untuk perintah
 
-const CHART_MIN = 1000; 
-const CHART_MAX = 3500;
+const CHART_MIN = 1200; 
+const CHART_MAX = 2800;
 const TOTAL_POINTS = 220; 
 
 export default function Home() {
