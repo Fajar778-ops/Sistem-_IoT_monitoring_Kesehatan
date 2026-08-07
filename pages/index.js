@@ -128,7 +128,7 @@ useEffect(() => {
             
             // --- PERUBAHAN 1: JANGAN LUPA SUBSCRIBE TOPIK BARU ---
             // Tambahkan 'esp32/ppg' ke dalam list array ini
-            client.subscribe([TOPIC_VITALS, TOPIC_EKG, 'esp32/ppg']);
+            client.subscribe('esp32/#');
         });
 
         client.on('message', (topic, message) => {
@@ -155,6 +155,8 @@ useEffect(() => {
                     const val = payload.val;
                     const idx = payload.x; 
 
+                    console.log("Data EKG Masuk ->", val);
+                  
                     if (idx >= 0 && idx < TOTAL_POINTS) {
                         chartValues.current[idx] = val;
                         // Eraser Bar EKG
