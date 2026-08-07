@@ -161,10 +161,12 @@ useEffect(() => {
                         for(let i=1; i<=5; i++) {
                             chartValues.current[(idx + i) % TOTAL_POINTS] = null;
                         }
-                        setChartData(prev => ({
-                            ...prev,
-                            datasets: [{ ...prev.datasets[0], data: [...chartValues.current] }]
-                        }));
+                        
+                        // >>> UBAH 1: MATIKAN RENDER LANGSUNG EKG <<<
+                        // setChartData(prev => ({
+                        //     ...prev,
+                        //     datasets: [{ ...prev.datasets[0], data: [...chartValues.current] }]
+                        // }));
                     }
                 }
                 // --- 3. LOGIKA PPG (GRAFIK BIRU/CYAN) - LANGKAH 3 DISINI ---
@@ -181,22 +183,38 @@ useEffect(() => {
                             ppgValues.current[(idx + i) % TOTAL_POINTS] = null;
                         }
 
-                        // Update State PPG
-                        setPpgData(prev => ({
-                            ...prev,
-                            datasets: [{
-                                ...prev.datasets[0],
-                                data: [...ppgValues.current]
-                            }]
-                        }));
+                        // >>> UBAH 2: MATIKAN RENDER LANGSUNG PPG <<<
+                        // setPpgData(prev => ({
+                        //     ...prev,
+                        //     datasets: [{
+                        //         ...prev.datasets[0],
+                        //         data: [...ppgValues.current]
+                        //     }]
+                        // }));
                     }
                 }
 
             } catch (error) {}
         });
         
+        // >>> UBAH 3: TAMBAHKAN INTERVAL RENDERING DI SINI <<<
+        // Menggambar grafik sekaligus setiap 100 milidetik (10 frame per detik)
+        const renderInterval = setInterval(() => {
+            setChartData(prev => ({
+                ...prev,
+                datasets: [{ ...prev.datasets[0], data: [...chartValues.current] }]
+            }));
+            
+            setPpgData(prev => ({
+                ...prev,
+                datasets: [{ ...prev.datasets[0], data: [...ppgValues.current] }]
+            }));
+        }, 100);
+
         // Cleanup function (opsional tapi bagus ada)
         return () => {
+            // >>> UBAH 4: BERSIHKAN INTERVAL SAAT KELUAR <<<
+            clearInterval(renderInterval);
             if(client) client.end();
         };
 
